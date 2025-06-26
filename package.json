@@ -20,7 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "migration:make": "knex migrate:make",
     "migration:run": "knex migrate:latest",
-    "migration:rollback": "knex migrate:rollback"
+    "migration:rollback": "knex migrate:rollback",
+    "seed:run": "knex seed:run"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

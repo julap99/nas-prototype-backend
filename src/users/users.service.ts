@@ -36,66 +36,132 @@ export class UsersService {
     );
 
     // Create user
-    const [userId] = await knex('users').insert({
-      email: createUserDto.email,
-      password: hashedPassword,
-      full_name: createUserDto.fullName,
-      created_at: new Date(),
-      updated_at: new Date(),
-    });
+    const [user] = await knex('users')
+      .insert({
+        email: createUserDto.email,
+        password: hashedPassword,
+        full_name: createUserDto.fullName,
+        role: createUserDto.role || 'asnaf', // Default to 'asnaf' role
+        is_active: true,
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .returning('*');
 
-    return this.findById(userId);
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      isActive: user.is_active,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+    };
   }
 
-  async findById(id: number): Promise<User> {
-    const knex = this.databaseService.connection;
+  async findAll(): Promise<User[]> {
+    const users = await this.databaseService
+      .connection('users')
+      .select('*')
+      .where('is_active', true);
 
-    const user = await knex('users')
-      .select(
-        'id',
-        'email',
-        'full_name',
-        'is_active',
-        'created_at',
-        'updated_at',
-      )
-      .where('id', id)
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
+      isActive: user.is_active,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+    }));
+  }
+
+  async findOne(id: number): Promise<User | null> {
+    const user = await this.databaseService
+      .connection('users')
+      .where({ id, is_active: true })
       .first();
 
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    if (!user) return null;
 
     return {
       id: user.id,
       email: user.email,
       fullName: user.full_name,
+      role: user.role,
       isActive: user.is_active,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
     };
   }
 
-  async findByEmail(email: string): Promise<User & { password: string }> {
-    const knex = this.databaseService.connection;
+  async findByEmail(
+    email: string,
+  ): Promise<(User & { password: string }) | null> {
+    const user = await this.databaseService
+      .connection('users')
+      .where({ email, is_active: true })
+      .first();
 
-    const user = await knex('users').select('*').where('email', email).first();
+    console.log('user: ', user);
 
-    console.log('User:', user);
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    if (!user) return null;
 
     return {
       id: user.id,
       email: user.email,
-      password: user.password,
       fullName: user.full_name,
+      role: user.role,
+      isActive: user.is_active,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+      password: user.password,
+    };
+  }
+
+  async update(
+    id: number,
+    updateData: Partial<CreateUserDto>,
+  ): Promise<User | null> {
+    const updatePayload: any = {};
+
+    if (updateData.email) updatePayload.email = updateData.email;
+    if (updateData.fullName) updatePayload.full_name = updateData.fullName;
+    if (updateData.role) updatePayload.role = updateData.role;
+    if (updateData.password) {
+      const saltRounds = this.configService.get<number>('BCRYPT_ROUNDS', 12);
+      updatePayload.password = await bcrypt.hash(
+        updateData.password,
+        saltRounds,
+      );
+    }
+
+    const [user] = await this.databaseService
+      .connection('users')
+      .where({ id })
+      .update(updatePayload)
+      .returning('*');
+
+    if (!user) return null;
+
+    return {
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      role: user.role,
       isActive: user.is_active,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
     };
+  }
+
+  async remove(id: number): Promise<boolean> {
+    const result = await this.databaseService
+      .connection('users')
+      .where({ id })
+      .update({ is_active: false });
+
+    return result > 0;
   }
 
   async validatePassword(

@@ -11,11 +11,14 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { User } from '../users/entities/user.entity';
 import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
 
 export interface JwtPayload {
   sub: number;
   email: string;
   tokenId?: string;
+  role: string;
+  fullName: string;
 }
 
 export interface AuthResponse {
@@ -44,10 +47,7 @@ export class AuthService {
         throw new UnauthorizedException('Account is deactivated');
       }
 
-      const isPasswordValid = await this.usersService.validatePassword(
-        password,
-        user.password,
-      );
+      const isPasswordValid = await bcrypt.compare(password, user.password);
 
       console.log('isPasswordValid:', isPasswordValid);
 
@@ -103,9 +103,9 @@ export class AuthService {
       }
 
       // Get user
-      const user = await this.usersService.findById(payload.sub);
+      const user = await this.usersService.findOne(payload.sub);
 
-      if (!user.isActive) {
+      if (!user || !user.isActive) {
         throw new UnauthorizedException('Account is deactivated');
       }
 
@@ -143,9 +143,9 @@ export class AuthService {
   async validateToken(token: string): Promise<User> {
     try {
       const payload = this.jwtService.verify(token) as JwtPayload;
-      const user = await this.usersService.findById(payload.sub);
+      const user = await this.usersService.findOne(payload.sub);
 
-      if (!user.isActive) {
+      if (!user || !user.isActive) {
         throw new UnauthorizedException('Account is deactivated');
       }
 
@@ -164,12 +164,16 @@ export class AuthService {
     const accessPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
+      role: user.role,
+      fullName: user.fullName,
     };
 
     const refreshPayload: JwtPayload = {
       sub: user.id,
       email: user.email,
       tokenId,
+      role: user.role,
+      fullName: user.fullName,
     };
 
     const accessToken = this.jwtService.sign(accessPayload);
