@@ -8,6 +8,9 @@ import { DatabaseModule } from './database/database.module';
 import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
+import { ProfilingModule } from './configuration/profiling/profiling.module';
+import { AsnafModule } from './asnaf/asnaf.module';
+import { TestModule } from './test/test.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -24,6 +27,9 @@ import { AppService } from './app.service';
     RedisModule,
     AuthModule,
     UsersModule,
+    ProfilingModule,
+    AsnafModule,
+    TestModule,
   ],
   controllers: [AppController],
   providers: [

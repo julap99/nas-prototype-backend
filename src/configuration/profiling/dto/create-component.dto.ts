@@ -1,0 +1,27 @@
+import { IsNotEmpty, IsString, IsOptional, MaxLength, IsArray, ValidateNested, ArrayMinSize } from 'class-validator';
+import { Type } from 'class-transformer';
+
+class ProcessDto {
+  @IsNotEmpty()
+  @IsString()
+  kodProses: string;
+}
+
+export class CreateComponentDto {
+  @IsNotEmpty()
+  @IsString()
+  @MaxLength(255)
+  namaPendaftaran: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(1000)
+  description?: string;
+
+  @IsNotEmpty()
+  @IsArray()
+  @ArrayMinSize(1)
+  @ValidateNested({ each: true })
+  @Type(() => ProcessDto)
+  kodProses: ProcessDto[]; // Array of process objects with flow order
+} 

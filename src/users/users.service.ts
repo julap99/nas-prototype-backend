@@ -36,7 +36,7 @@ export class UsersService {
     );
 
     // Create user
-    const [user] = await knex('users')
+    const insertResult = await knex('users')
       .insert({
         email: createUserDto.email,
         password: hashedPassword,
@@ -45,8 +45,12 @@ export class UsersService {
         is_active: true,
         created_at: new Date(),
         updated_at: new Date(),
-      })
-      .returning('*');
+      });
+
+    // Fetch the created user
+    const user = await knex('users')
+      .where({ id: insertResult[0] })
+      .first();
 
     return {
       id: user.id,
@@ -136,11 +140,19 @@ export class UsersService {
       );
     }
 
-    const [user] = await this.databaseService
+    // Update the user
+    const updateResult = await this.databaseService
       .connection('users')
       .where({ id })
-      .update(updatePayload)
-      .returning('*');
+      .update(updatePayload);
+
+    if (updateResult === 0) return null;
+
+    // Fetch the updated user
+    const user = await this.databaseService
+      .connection('users')
+      .where({ id })
+      .first();
 
     if (!user) return null;
 
