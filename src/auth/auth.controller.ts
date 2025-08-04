@@ -11,6 +11,7 @@ import {
 import { AuthService } from './auth.service';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { BasicAuthGuard } from './guards/basic-auth.guard';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { LogoutDto } from './dto/logout.dto';
@@ -54,5 +55,16 @@ export class AuthController {
   async logoutAll(@Request() req) {
     await this.authService.logoutAll(req.user.id);
     return { message: 'Logged out from all devices successfully' };
+  }
+
+  // Basic Auth test endpoint for third-party platforms
+  @Get('basic-test')
+  @UseGuards(BasicAuthGuard)
+  async basicAuthTest(@Request() req) {
+    return {
+      message: 'Basic Auth successful',
+      user: req.user,
+      timestamp: new Date().toISOString(),
+    };
   }
 } 
