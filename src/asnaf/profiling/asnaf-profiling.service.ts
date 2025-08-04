@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { DatabaseService } from '../../database/database.service';
 import { CreateMaklumatPendidikanDto } from './dto/create-maklumat-pendidikan.dto';
-import { MaklumatPendidikan } from './entities/maklumat-pendidikan.entity';
+import { GetMaklumatPendidikan, PostMaklumatPendidikan } from './entities/maklumat-pendidikan.entity';
 
 // Helper function to safely parse JSON
 function safeJsonParse(value: any): any {
@@ -26,9 +26,34 @@ function safeJsonParse(value: any): any {
 export class AsnafProfilingService {
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private parseTahapPendidikan(value: any): any[] {
+    if (!value) return [];
+    
+    // If it's already an array, return it
+    if (Array.isArray(value)) return value;
+    
+    // If it's a string, try to parse it
+    if (typeof value === 'string') {
+      // First try to parse as JSON
+      try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        // If JSON parsing fails, try to split by comma (for comma-separated values)
+        if (value.includes(',')) {
+          return value.split(',').map(item => item.trim()).filter(item => item.length > 0);
+        }
+        // If it's a single value, return it as an array
+        return [value.trim()];
+      }
+    }
+    
+    return [];
+  }
+
   async createMaklumatPendidikan(
     createMaklumatPendidikanDto: CreateMaklumatPendidikanDto,
-  ): Promise<MaklumatPendidikan> {
+  ): Promise<PostMaklumatPendidikan> {
     const knex = this.databaseService.connection;
 
     // Check if asnaf profiling record exists
@@ -102,7 +127,7 @@ export class AsnafProfilingService {
 
   async findMaklumatPendidikanByUuid(
     asnafUuid: string,
-  ): Promise<MaklumatPendidikan | null> {
+  ): Promise<GetMaklumatPendidikan | null> {
     const knex = this.databaseService.connection;
 
     const asnafProfiling = await knex('k_asnaf_profiling')
@@ -114,6 +139,11 @@ export class AsnafProfilingService {
 
     return {
       asnafUuid: asnafProfiling.asnaf_uuid,
+      masihBersekolah: Boolean(asnafProfiling.masih_bersekolah),
+      pendidikanTertinggi: asnafProfiling.pendidikan_tertinggi,
+      lainLainPendidikanTertinggi:
+        asnafProfiling.lain_lain_pendidikan_tertinggi,
+      tahapPendidikanDicapai: this.parseTahapPendidikan(asnafProfiling.tahap_pendidikan_dicapai),
       status: asnafProfiling.status,
       createdAt: asnafProfiling.created_date,
       updatedAt: asnafProfiling.updated_date,
