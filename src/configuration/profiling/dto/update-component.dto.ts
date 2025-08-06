@@ -24,4 +24,8 @@ export class UpdateComponentDto {
   @ValidateNested({ each: true })
   @Type(() => ProcessDto)
   kodProses?: ProcessDto[]; // Array of process objects with flow order
+
+  @IsOptional()
+  @IsString()
+  kodKomponen?: string; // Not updatable, but included for completeness
 } 

@@ -16,7 +16,7 @@ import { UpdateProcessDto } from './dto/update-process.dto';
 import { Process } from './entities/process.entity';
 
 @Controller('configuration/profiling/process')
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard)
 export class ProcessController {
   constructor(private readonly processService: ProcessService) {}
 
@@ -44,7 +44,9 @@ export class ProcessController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<{ success: boolean; affectedComponents?: any[] }> {
+  async remove(
+    @Param('id') id: string,
+  ): Promise<{ success: boolean; affectedComponents?: any[] }> {
     const result = await this.processService.remove(id);
     return result;
   }

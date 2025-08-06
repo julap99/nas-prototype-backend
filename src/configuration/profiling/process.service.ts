@@ -29,16 +29,15 @@ export class ProcessService {
     }
 
     // Create process
-    const insertResult = await knex('k_profiling_proses')
-      .insert({
-        kod_proses: kodProses,
-        nama_proses: createProcessDto.namaProses,
-        id_page: createProcessDto.idPage,
-        keterangan: createProcessDto.description || null,
-        status: createProcessDto.status || 1, // Default to active (1)
-        created_date: new Date(),
-        updated_date: new Date(),
-      });
+    const insertResult = await knex('k_profiling_proses').insert({
+      kod_proses: kodProses,
+      nama_proses: createProcessDto.namaProses,
+      id_page: createProcessDto.idPage,
+      keterangan: createProcessDto.description || null,
+      status: createProcessDto.status || 1, // Default to active (1)
+      created_date: new Date(),
+      updated_date: new Date(),
+    });
 
     // Fetch the created process
     const process = await knex('k_profiling_proses')
@@ -164,7 +163,9 @@ export class ProcessService {
     };
   }
 
-  async remove(identifier: string | number): Promise<{ success: boolean; affectedComponents?: any[] }> {
+  async remove(
+    identifier: string | number,
+  ): Promise<{ success: boolean; affectedComponents?: any[] }> {
     const knex = this.databaseService.connection;
 
     // Check if identifier is a number (ID) or string (kodProses)
@@ -172,11 +173,13 @@ export class ProcessService {
 
     let whereClause;
     let processCode: string;
-    
+
     if (isNumeric) {
       whereClause = { id: parseInt(identifier.toString()) };
       // Get the process code for checking components
-      const process = await knex('k_profiling_proses').where(whereClause).first();
+      const process = await knex('k_profiling_proses')
+        .where(whereClause)
+        .first();
       if (!process) {
         return { success: false };
       }
@@ -187,13 +190,14 @@ export class ProcessService {
     }
 
     // Check if any components are using this process
-    const affectedComponents = await this.findComponentsUsingProcess(processCode);
+    const affectedComponents =
+      await this.findComponentsUsingProcess(processCode);
 
     // If components are using this process, return them without deleting
     if (affectedComponents && affectedComponents.length > 0) {
-      return { 
-        success: false, 
-        affectedComponents 
+      return {
+        success: false,
+        affectedComponents,
       };
     }
 
@@ -203,13 +207,16 @@ export class ProcessService {
     return { success: result > 0 };
   }
 
-  async updateStatus(identifier: string | number, status: number): Promise<Process | null> {
+  async updateStatus(
+    identifier: string | number,
+    status: number,
+  ): Promise<Process | null> {
     const knex = this.databaseService.connection;
 
     // Check if identifier is a number (ID) or string (kodProses)
     const isNumeric = !isNaN(Number(identifier));
     let whereClause;
-    
+
     if (isNumeric) {
       whereClause = { id: parseInt(identifier.toString()) };
     } else {
@@ -217,16 +224,20 @@ export class ProcessService {
     }
 
     // Check if process exists
-    const existingProcess = await knex('k_profiling_proses').where(whereClause).first();
+    const existingProcess = await knex('k_profiling_proses')
+      .where(whereClause)
+      .first();
     if (!existingProcess) {
       throw new NotFoundException('Process not found');
     }
 
     // Update the status
-    const updateResult = await knex('k_profiling_proses').where(whereClause).update({
-      status: status,
-      updated_date: new Date(),
-    });
+    const updateResult = await knex('k_profiling_proses')
+      .where(whereClause)
+      .update({
+        status: status,
+        updated_date: new Date(),
+      });
 
     if (updateResult === 0) return null;
 
@@ -246,7 +257,9 @@ export class ProcessService {
     };
   }
 
-  private async findComponentsUsingProcess(processCode: string): Promise<any[]> {
+  private async findComponentsUsingProcess(
+    processCode: string,
+  ): Promise<any[]> {
     const knex = this.databaseService.connection;
 
     try {
@@ -265,7 +278,10 @@ export class ProcessService {
             processCodes = JSON.parse(component.kod_proses);
           }
         } catch (e) {
-          console.warn('Failed to parse kod_proses JSON for component:', component.id_profiling_component);
+          console.warn(
+            'Failed to parse kod_proses JSON for component:',
+            component.id_profiling_component,
+          );
           continue;
         }
 
@@ -274,7 +290,7 @@ export class ProcessService {
           affectedComponents.push({
             id: component.id_profiling_component,
             name: component.nama_pendaftaran,
-            description: component.description
+            description: component.description,
           });
         }
       }

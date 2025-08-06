@@ -54,6 +54,20 @@ export class ComponentService {
         throw new ConflictException('Component with this name already exists');
       }
 
+      // Generate unique component code (kodKomponen)
+      // Example: COMP_001, COMP_002, ...
+      const lastComponent = await knex('k_profiling_component')
+        .orderBy('id_profiling_component', 'desc')
+        .first();
+      let nextNumber = 1;
+      if (lastComponent && lastComponent.kod_komponen) {
+        const match = lastComponent.kod_komponen.match(/COMP_(\d+)/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const kodKomponen = `COMP_${String(nextNumber).padStart(3, '0')}`;
+
       // Extract only the process codes from the kodProses array
       const processCodes = createComponentDto.kodProses.map(
         (process) => process.kodProses,
@@ -66,6 +80,7 @@ export class ComponentService {
           nama_pendaftaran: createComponentDto.namaPendaftaran,
           description: createComponentDto.description || null,
           kod_proses: JSON.stringify(processCodes), // Store as JSON string
+          kod_komponen: kodKomponen, // Store generated code
           status: 1, // Default to active
           created_date: new Date(),
           updated_date: new Date(),
@@ -94,6 +109,7 @@ export class ComponentService {
         namaPendaftaran: component.nama_pendaftaran,
         description: component.description,
         kodProses: this.parseKodProses(component.kod_proses),
+        kodKomponen: component.kod_komponen, // Include code
         status: component.status,
         createdAt: component.created_date,
         updatedAt: component.updated_date,
@@ -121,17 +137,18 @@ export class ComponentService {
       namaPendaftaran: component.nama_pendaftaran,
       description: component.description,
       kodProses: this.parseKodProses(component.kod_proses),
+      kodKomponen: component.kod_komponen, // Include code
       status: component.status,
       createdAt: component.created_date,
       updatedAt: component.updated_date,
     }));
   }
 
-  async findOne(id: string): Promise<Component | null> {
+  async findOne(code: string): Promise<Component | null> {
     const knex = this.databaseService.connection;
 
     const component = await knex('k_profiling_component')
-      .where({ id_profiling_component: parseInt(id), status: 1 })
+      .where({ kod_komponen: code, status: 1 })
       .first();
 
     if (!component) return null;
@@ -141,6 +158,7 @@ export class ComponentService {
       namaPendaftaran: component.nama_pendaftaran,
       description: component.description,
       kodProses: this.parseKodProses(component.kod_proses),
+      kodKomponen: component.kod_komponen, // Include code
       status: component.status,
       createdAt: component.created_date,
       updatedAt: component.updated_date,
@@ -189,6 +207,7 @@ export class ComponentService {
       );
       updatePayload.kod_proses = JSON.stringify(processCodes); // Store as JSON string
     }
+    // Do NOT allow kodKomponen to be updated
     updatePayload.updated_date = new Date();
 
     // Update the record
@@ -210,6 +229,7 @@ export class ComponentService {
       namaPendaftaran: component.nama_pendaftaran,
       description: component.description,
       kodProses: this.parseKodProses(component.kod_proses),
+      kodKomponen: component.kod_komponen, // Include code
       status: component.status,
       createdAt: component.created_date,
       updatedAt: component.updated_date,
@@ -285,15 +305,15 @@ export class ComponentService {
     }
   }
 
-  async findComponentWithProcessesById(componentId: string): Promise<any> {
+  async findComponentWithProcessesById(code: string): Promise<any> {
     const knex = this.databaseService.connection;
 
-    console.log('componentId:', componentId);
+    console.log('code:', code);
 
     try {
       // Get the specific component
       const component = await knex('k_profiling_component')
-        .where({ id_profiling_component: parseInt(componentId), status: 1 })
+        .where({ kod_komponen: code, status: 1 })
         .first();
 
       if (!component) {

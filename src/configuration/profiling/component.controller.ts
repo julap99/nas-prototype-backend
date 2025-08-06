@@ -15,7 +15,7 @@ import { UpdateComponentDto } from './dto/update-component.dto';
 import { Component } from './entities/component.entity';
 
 @Controller('configuration/profiling/component')
-@UseGuards(JwtAuthGuard)
+// @UseGuards(JwtAuthGuard)
 export class ComponentController {
   constructor(private readonly componentService: ComponentService) {}
 
@@ -34,9 +34,9 @@ export class ComponentController {
     return this.componentService.findAll();
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Component | null> {
-    return this.componentService.findOne(id);
+  @Get(':code')
+  async findOne(@Param('code') code: string): Promise<Component | null> {
+    return this.componentService.findOne(code);
   }
 
   @Patch(':id')
@@ -58,8 +58,8 @@ export class ComponentController {
     return this.componentService.findComponentsWithProcesses();
   }
 
-  @Get('workflows/:id')
-  async findComponentWithProcessesById(@Param('id') id: string): Promise<any> {
-    return this.componentService.findComponentWithProcessesById(id);
+  @Get('workflows/:code')
+  async findComponentWithProcessesById(@Param('code') code: string): Promise<any> {
+    return this.componentService.findComponentWithProcessesById(code);
   }
 } 
