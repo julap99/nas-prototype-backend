@@ -31,6 +31,11 @@ export class UpdateProcessDto {
   description?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  kodKategori?: string;
+
+  @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   @IsIn([0, 1])

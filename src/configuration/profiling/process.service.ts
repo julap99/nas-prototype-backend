@@ -28,12 +28,24 @@ export class ProcessService {
       throw new ConflictException('Process with this name already exists');
     }
 
+    // Get category name if kodKategori is provided
+    let namaKategori = null;
+    if (createProcessDto.kodKategori) {
+      const category = await knex('k_profiling_kategori')
+        .where('kod_kategori', createProcessDto.kodKategori)
+        .where('status', 1)
+        .first();
+      namaKategori = category ? category.nama_kategori : null;
+    }
+
     // Create process
     const insertResult = await knex('k_profiling_proses').insert({
       kod_proses: kodProses,
       nama_proses: createProcessDto.namaProses,
       id_page: createProcessDto.idPage,
       keterangan: createProcessDto.description || null,
+      kod_kategori: createProcessDto.kodKategori || null,
+      nama_kategori: namaKategori,
       status: createProcessDto.status || 1, // Default to active (1)
       created_date: new Date(),
       updated_date: new Date(),
@@ -50,6 +62,8 @@ export class ProcessService {
       namaProses: process.nama_proses,
       idPage: process.id_page,
       description: process.keterangan,
+      kodKategori: process.kod_kategori,
+      namaKategori: process.nama_kategori,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -63,11 +77,13 @@ export class ProcessService {
       .orderBy('created_date', 'desc');
 
     return processes.map((process) => ({
-      id: process.id,
+      id: process.id_profiling_proses,
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
       description: process.keterangan,
+      kodKategori: process.kod_kategori,
+      namaKategori: process.nama_kategori,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -84,11 +100,13 @@ export class ProcessService {
     if (!process) return null;
 
     return {
-      id: process.id,
+      id: process.id_profiling_proses,
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
       description: process.keterangan,
+      kodKategori: process.kod_kategori,
+      namaKategori: process.nama_kategori,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -124,6 +142,16 @@ export class ProcessService {
       }
     }
 
+    // Get category name if kodKategori is being updated
+    let namaKategori = existingProcess.nama_kategori;
+    if (updateProcessDto.kodKategori && updateProcessDto.kodKategori !== existingProcess.kod_kategori) {
+      const category = await knex('k_profiling_kategori')
+        .where('kod_kategori', updateProcessDto.kodKategori)
+        .where('status', 1)
+        .first();
+      namaKategori = category ? category.nama_kategori : null;
+    }
+
     const updatePayload: any = {};
     if (updateProcessDto.kodProses)
       updatePayload.kod_proses = updateProcessDto.kodProses;
@@ -133,6 +161,10 @@ export class ProcessService {
       updatePayload.id_page = updateProcessDto.idPage;
     if (updateProcessDto.description !== undefined)
       updatePayload.keterangan = updateProcessDto.description;
+    if (updateProcessDto.kodKategori !== undefined) {
+      updatePayload.kod_kategori = updateProcessDto.kodKategori;
+      updatePayload.nama_kategori = namaKategori;
+    }
     if (updateProcessDto.status !== undefined)
       updatePayload.status = updateProcessDto.status;
     updatePayload.updated_date = new Date();
@@ -152,11 +184,13 @@ export class ProcessService {
     if (!process) return null;
 
     return {
-      id: process.id,
+      id: process.id_profiling_proses,
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
       description: process.keterangan,
+      kodKategori: process.kod_kategori,
+      namaKategori: process.nama_kategori,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -246,11 +280,13 @@ export class ProcessService {
     if (!process) return null;
 
     return {
-      id: process.id,
+      id: process.id_profiling_proses,
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
       description: process.keterangan,
+      kodKategori: process.kod_kategori,
+      namaKategori: process.nama_kategori,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
