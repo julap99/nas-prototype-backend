@@ -34,6 +34,7 @@ export class ProcessService {
         kod_proses: kodProses,
         nama_proses: createProcessDto.namaProses,
         id_page: createProcessDto.idPage,
+        keterangan: createProcessDto.description || null,
         status: createProcessDto.status || 1, // Default to active (1)
         created_date: new Date(),
         updated_date: new Date(),
@@ -49,6 +50,7 @@ export class ProcessService {
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
+      description: process.keterangan,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -59,7 +61,6 @@ export class ProcessService {
     const processes = await this.databaseService
       .connection('k_profiling_proses')
       .select('*')
-      .where('status', 1)
       .orderBy('created_date', 'desc');
 
     return processes.map((process) => ({
@@ -67,6 +68,7 @@ export class ProcessService {
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
+      description: process.keterangan,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -77,7 +79,7 @@ export class ProcessService {
     const knex = this.databaseService.connection;
 
     const process = await knex('k_profiling_proses')
-      .where({ kod_proses: identifier.toString(), status: 1 })
+      .where({ kod_proses: identifier.toString() })
       .first();
 
     if (!process) return null;
@@ -87,6 +89,7 @@ export class ProcessService {
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
+      description: process.keterangan,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
@@ -100,7 +103,7 @@ export class ProcessService {
     const knex = this.databaseService.connection;
 
     const existingProcess = await knex('k_profiling_proses')
-      .where({ kod_proses: identifier.toString(), status: 1 })
+      .where({ kod_proses: identifier.toString() })
       .first();
 
     if (!existingProcess) {
@@ -114,7 +117,6 @@ export class ProcessService {
     ) {
       const nameConflict = await knex('k_profiling_proses')
         .where('nama_proses', updateProcessDto.namaProses)
-        .where('status', 1)
         .whereNot('kod_proses', identifier)
         .first();
 
@@ -130,6 +132,8 @@ export class ProcessService {
       updatePayload.nama_proses = updateProcessDto.namaProses;
     if (updateProcessDto.idPage)
       updatePayload.id_page = updateProcessDto.idPage;
+    if (updateProcessDto.description !== undefined)
+      updatePayload.keterangan = updateProcessDto.description;
     if (updateProcessDto.status !== undefined)
       updatePayload.status = updateProcessDto.status;
     updatePayload.updated_date = new Date();
@@ -153,31 +157,133 @@ export class ProcessService {
       kodProses: process.kod_proses,
       namaProses: process.nama_proses,
       idPage: process.id_page,
+      description: process.keterangan,
       status: process.status,
       createdAt: process.created_date,
       updatedAt: process.updated_date,
     };
   }
 
-  async remove(identifier: string | number): Promise<boolean> {
+  async remove(identifier: string | number): Promise<{ success: boolean; affectedComponents?: any[] }> {
     const knex = this.databaseService.connection;
 
     // Check if identifier is a number (ID) or string (kodProses)
     const isNumeric = !isNaN(Number(identifier));
 
     let whereClause;
+    let processCode: string;
+    
+    if (isNumeric) {
+      whereClause = { id: parseInt(identifier.toString()) };
+      // Get the process code for checking components
+      const process = await knex('k_profiling_proses').where(whereClause).first();
+      if (!process) {
+        return { success: false };
+      }
+      processCode = process.kod_proses;
+    } else {
+      whereClause = { kod_proses: identifier.toString() };
+      processCode = identifier.toString();
+    }
+
+    // Check if any components are using this process
+    const affectedComponents = await this.findComponentsUsingProcess(processCode);
+
+    // If components are using this process, return them without deleting
+    if (affectedComponents && affectedComponents.length > 0) {
+      return { 
+        success: false, 
+        affectedComponents 
+      };
+    }
+
+    // If no components are using this process, proceed with actual deletion
+    const result = await knex('k_profiling_proses').where(whereClause).del();
+
+    return { success: result > 0 };
+  }
+
+  async updateStatus(identifier: string | number, status: number): Promise<Process | null> {
+    const knex = this.databaseService.connection;
+
+    // Check if identifier is a number (ID) or string (kodProses)
+    const isNumeric = !isNaN(Number(identifier));
+    let whereClause;
+    
     if (isNumeric) {
       whereClause = { id: parseInt(identifier.toString()) };
     } else {
       whereClause = { kod_proses: identifier.toString() };
     }
 
-    const result = await knex('k_profiling_proses').where(whereClause).update({
-      status: 0, // Set to inactive instead of deleting
+    // Check if process exists
+    const existingProcess = await knex('k_profiling_proses').where(whereClause).first();
+    if (!existingProcess) {
+      throw new NotFoundException('Process not found');
+    }
+
+    // Update the status
+    const updateResult = await knex('k_profiling_proses').where(whereClause).update({
+      status: status,
       updated_date: new Date(),
     });
 
-    return result > 0;
+    if (updateResult === 0) return null;
+
+    // Fetch the updated record
+    const process = await knex('k_profiling_proses').where(whereClause).first();
+    if (!process) return null;
+
+    return {
+      id: process.id,
+      kodProses: process.kod_proses,
+      namaProses: process.nama_proses,
+      idPage: process.id_page,
+      description: process.keterangan,
+      status: process.status,
+      createdAt: process.created_date,
+      updatedAt: process.updated_date,
+    };
+  }
+
+  private async findComponentsUsingProcess(processCode: string): Promise<any[]> {
+    const knex = this.databaseService.connection;
+
+    try {
+      // Get all active components
+      const components = await knex('k_profiling_component')
+        .where('status', 1)
+        .select('*');
+
+      const affectedComponents = [];
+
+      for (const component of components) {
+        // Parse the kod_proses JSON string
+        let processCodes: string[] = [];
+        try {
+          if (component.kod_proses) {
+            processCodes = JSON.parse(component.kod_proses);
+          }
+        } catch (e) {
+          console.warn('Failed to parse kod_proses JSON for component:', component.id_profiling_component);
+          continue;
+        }
+
+        // Check if this component uses the process being deleted
+        if (processCodes.includes(processCode)) {
+          affectedComponents.push({
+            id: component.id_profiling_component,
+            name: component.nama_pendaftaran,
+            description: component.description
+          });
+        }
+      }
+
+      return affectedComponents;
+    } catch (error) {
+      console.error('Error finding components using process:', error);
+      return [];
+    }
   }
 
   private async generateKodProses(): Promise<string> {

@@ -19,10 +19,12 @@ import { AppService } from './app.service';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    ThrottlerModule.forRoot({
-      ttl: 60000, // 1 minute
-      limit: 10, // 10 requests per minute
-    }),
+    ...(process.env.NODE_ENV === 'production' ? [
+      ThrottlerModule.forRoot({
+        ttl: 60000, // 1 minute
+        limit: 10, // 10 requests per minute
+      })
+    ] : []),
     DatabaseModule,
     RedisModule,
     AuthModule,
@@ -34,10 +36,12 @@ import { AppService } from './app.service';
   controllers: [AppController],
   providers: [
     AppService,
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.NODE_ENV === 'production' ? [
+      {
+        provide: APP_GUARD,
+        useClass: ThrottlerGuard,
+      }
+    ] : []),
   ],
 })
 export class AppModule {} 

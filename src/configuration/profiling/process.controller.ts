@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  Put,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ProcessService } from './process.service';
@@ -43,8 +44,16 @@ export class ProcessController {
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string): Promise<{ success: boolean }> {
+  async remove(@Param('id') id: string): Promise<{ success: boolean; affectedComponents?: any[] }> {
     const result = await this.processService.remove(id);
-    return { success: result };
+    return result;
   }
-} 
+
+  @Put(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: number },
+  ): Promise<Process | null> {
+    return this.processService.updateStatus(id, body.status);
+  }
+}

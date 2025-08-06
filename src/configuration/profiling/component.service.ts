@@ -297,7 +297,7 @@ export class ComponentService {
         .first();
 
       if (!component) {
-        throw new Error('Component not found');
+        throw new NotFoundException('Component not found');
       }
 
       // Parse the kod_proses JSON string to get process codes

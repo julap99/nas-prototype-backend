@@ -26,6 +26,11 @@ export class UpdateProcessDto {
   idPage?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  description?: string;
+
+  @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   @IsIn([0, 1])
