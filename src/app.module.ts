@@ -5,7 +5,6 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
 
 import { DatabaseModule } from './database/database.module';
-import { RedisModule } from './redis/redis.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { ProfilingModule } from './configuration/profiling/profiling.module';
@@ -26,7 +25,6 @@ import { AppService } from './app.service';
       })
     ] : []),
     DatabaseModule,
-    RedisModule,
     AuthModule,
     UsersModule,
     ProfilingModule,

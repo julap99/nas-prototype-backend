@@ -10,6 +10,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { BasicStrategy } from './strategies/basic.strategy';
 import { BpAccessService } from './bp-access.service';
+import { TokenStorageService } from './token-storage.service';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { BpAccessService } from './bp-access.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, LocalStrategy, JwtStrategy, BasicStrategy, BpAccessService],
-  exports: [AuthService, BpAccessService],
+  providers: [AuthService, LocalStrategy, JwtStrategy, BasicStrategy, BpAccessService, TokenStorageService],
+  exports: [AuthService, BpAccessService, TokenStorageService],
 })
 export class AuthModule {} 

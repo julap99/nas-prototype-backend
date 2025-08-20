@@ -6,7 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
-import { RedisService } from '../redis/redis.service';
+import { TokenStorageService } from './token-storage.service';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { User } from '../users/entities/user.entity';
@@ -33,7 +33,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly redisService: RedisService,
+    private readonly tokenStorageService: TokenStorageService,
   ) {}
 
   async validateUser(email: string, password: string): Promise<User | null> {
@@ -92,8 +92,8 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       }) as JwtPayload;
 
-      // Check if refresh token exists in Redis
-      const isValid = await this.redisService.isRefreshTokenValid(
+      // Check if refresh token exists in storage
+      const isValid = await this.tokenStorageService.isRefreshTokenValid(
         payload.sub,
         payload.tokenId,
       );
@@ -110,7 +110,7 @@ export class AuthService {
       }
 
       // Revoke old refresh token
-      await this.redisService.revokeRefreshToken(payload.sub, payload.tokenId);
+      await this.tokenStorageService.revokeRefreshToken(payload.sub, payload.tokenId);
 
       // Generate new tokens
       const tokens = await this.generateTokens(user);
@@ -130,14 +130,14 @@ export class AuthService {
         secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
       }) as JwtPayload;
 
-      await this.redisService.revokeRefreshToken(userId, payload.tokenId);
+      await this.tokenStorageService.revokeRefreshToken(userId, payload.tokenId);
     } catch (error) {
       // Token might be invalid or expired, which is fine for logout
     }
   }
 
   async logoutAll(userId: number): Promise<void> {
-    await this.redisService.revokeAllUserTokens(userId);
+    await this.tokenStorageService.revokeAllUserTokens(userId);
   }
 
   async validateToken(token: string): Promise<User> {
@@ -187,14 +187,14 @@ export class AuthService {
 
     console.log('refreshToken:', refreshToken);
 
-    // Store refresh token in Redis
+    // Store refresh token in storage
     const refreshTtl = this.parseExpirationToSeconds(
       this.configService.get<string>('JWT_REFRESH_EXPIRATION', '7d'),
     );
 
     console.log('refreshTtl:', refreshTtl);
 
-    await this.redisService.setRefreshToken(user.id, tokenId, refreshTtl);
+    await this.tokenStorageService.setRefreshToken(user.id, tokenId, refreshTtl);
 
     return {
       accessToken,
